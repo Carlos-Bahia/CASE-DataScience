@@ -8,6 +8,8 @@ MISSING_VALUE = "N/D"
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _URL_RE = re.compile(r"https?://\S+")
 _MULTIPLE_SPACES_RE = re.compile(r"\s{2,}")
+_DASH_UNDERSCORE_RE = re.compile(r"[-_]")
+_DIGITS_RE = re.compile(r"\d+")
 
 DATASET_FIELDS = ["title", "text", "category", "subcategory", "date", 'link']
 DATASET_TEXT_FIELDS = ["title", "text", "category", "subcategory"]
@@ -22,6 +24,13 @@ def clean_text(text: str) -> str:
     return text.strip().lower()
 
 
+# Normaliza rótulos categorias: trocando -/_ por espaço e removendo digítos
+def normalize_label(value: str) -> str:
+    value = _DASH_UNDERSCORE_RE.sub(" ", value)
+    value = _DIGITS_RE.sub("", value)
+    return clean_text(value)
+
+
 # Limpeza de 1 linha
 def clean_row(row: dict) -> dict:
     row = dict(row)
@@ -34,8 +43,16 @@ def clean_row(row: dict) -> dict:
         # Realiza a limpeza dos campos de texto
         if field in DATASET_TEXT_FIELDS:
             value = row.get(field)
-            row[field] = clean_text(str(value)) if pd.isna(value) or not str(value).strip() \
-                                                else value
+
+            # Normaliza categoria e subcategoria
+            if (field in ("category", "subcategory")):
+                row[field] = normalize_label(str(value)) if not (pd.isna(value) or not str(value).strip()) \
+                                                                     else MISSING_VALUE
+                
+            # Limpa título e texto
+            else:
+                row[field] = clean_text(str(value)) if not (pd.isna(value) or not str(value).strip()) \
+                                                    else MISSING_VALUE
 
     return row
 
@@ -45,9 +62,19 @@ def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop_duplicates(subset=["title", "text"]).copy()
 
     for field in DATASET_TEXT_FIELDS:
-        df[field] = df[field].apply(
-            lambda value: MISSING_VALUE if pd.isna(value) or not str(value).strip() else clean_text(str(value))
-        )
+        # Normaliza categoria e subcategoria
+        if field in ("category", "subcategory"):
+            df[field] = df[field].apply(
+                lambda value: normalize_label(str(value)) if not (pd.isna(value) or not str(value).strip()) \
+                                                            else MISSING_VALUE
+            )
+
+        # Limpa título e texto
+        else:
+            df[field] = df[field].apply(
+                lambda value: clean_text(str(value)) if not (pd.isna(value) or not str(value).strip()) \
+                                                      else MISSING_VALUE
+            )
 
     return df
 
