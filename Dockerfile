@@ -13,4 +13,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python -m src.data.prepare_data && uvicorn src.api.main:app --host 0.0.0.0 --port 8000"]

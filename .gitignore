@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# Datasets grandes e regeneráveis via código (src/data/reader.py e src/data/process.py)
+data/raw/
+data/processed/
+data/model/articles_lemmatized.csv
